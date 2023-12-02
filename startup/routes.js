@@ -10,7 +10,7 @@ const error = require("../middleware/error");
 
 module.exports = function (app) {
   app.use(express.json());
-  app.use(express.static("uploads"));
+  app.use(express.static("./uploads"));
   app.use("/api/analytics", analytics);
   app.use("/api/products", products);
   app.use("/api/orders", orders);

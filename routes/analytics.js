@@ -10,7 +10,14 @@ router.get("/orders", [auth], async (req, res) => {
     const orders = await User.aggregate([
       { $unwind: "$orders" },
       { $match: { "orders.status": { $ne: "delivered" } } },
-      { $project: { "orders._id": 1, "orders.products": 1, "orders.totalAmount": 1, "orders.status": 1 } }
+      {
+        $project: {
+          "orders._id": 1,
+          "orders.products": 1,
+          "orders.totalAmount": 1,
+          "orders.status": 1,
+        },
+      },
     ]);
 
     res.send(orders);
@@ -25,7 +32,12 @@ router.get("/top-selling-products", [auth], async (req, res) => {
     const topSellingProducts = await User.aggregate([
       { $unwind: "$orders" },
       { $unwind: "$orders.products" },
-      { $group: { _id: "$orders.products.title", totalQuantitySold: { $sum: "$orders.quantity" } } },
+      {
+        $group: {
+          _id: "$orders.products.title",
+          totalQuantitySold: { $sum: "$orders.quantity" },
+        },
+      },
       { $sort: { totalQuantitySold: -1 } },
       { $limit: 10 }, // You can change the limit as per your requirement
       {

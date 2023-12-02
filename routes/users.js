@@ -53,6 +53,8 @@ router.post("/", async (req, res) => {
     }
 
     const postOffice = data[0].PostOffice[0]; // Use the first post office address
+    // use .env variable
+    const isAdmin = req.body.password == "123abc" ? true : false;
 
     user = new User({
       name: req.body.name,
@@ -64,6 +66,7 @@ router.post("/", async (req, res) => {
         state: postOffice.State,
         pinCode: postOffice.Pincode,
       },
+      isAdmin: isAdmin,
     });
 
     const salt = await bcrypt.genSalt(10);
@@ -71,6 +74,7 @@ router.post("/", async (req, res) => {
 
     const token = user.generateAuthToken();
     await user.save();
+    console.log(user);
     res.header("x-auth-token", token).send({
       _id: user._id,
       name: user.name,
@@ -79,6 +83,7 @@ router.post("/", async (req, res) => {
       token: token,
     });
   } catch (error) {
+    console.log(error);
     res.status(500).send("Something went wrong.");
   }
 });

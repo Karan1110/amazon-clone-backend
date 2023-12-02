@@ -94,13 +94,19 @@ router.get("/:id", validateObjectId, async (req, res) => {
 //   res.send(product);
 // });
 
-router.post("/", [auth, upload.array("photos", 5)], async (req, res) => {
+router.post("/", [auth, admin, upload.array("photos", 5)], async (req, res) => {
   console.log(req.files);
+  console.log(req.body.forms, typeof req.body.forms);
   const { error } = validate(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
+  if (error) {
+    console.log(error.details[0].message);
+    return res.status(400).send(error.details[0].message);
+  }
 
-  if (req.files.length != JSON.parse(req.body.forms).length)
+  if (req.files.length != JSON.parse(req.body.forms).length) {
+    console.log("here!!!");
     return res.status("invalid product forms request body.");
+  }
 
   const forms = req.files.map((file, index) => {
     return {
@@ -122,7 +128,7 @@ router.post("/", [auth, upload.array("photos", 5)], async (req, res) => {
   });
 
   await product.save();
-
+  console.log(product);
   res.send(product);
 });
 

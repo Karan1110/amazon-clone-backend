@@ -95,7 +95,6 @@ function validateProduct(product) {
         name: Joi.string().min(2).max(50).required(),
       })
     ),
-    photos: Joi.array(),
     brand: Joi.string().min(2).max(50).required(),
     category: Joi.string().min(2).max(50).required(),
     numberInStock: Joi.number().min(0).required(),
