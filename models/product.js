@@ -98,6 +98,7 @@ function validateProduct(product) {
     brand: Joi.string().min(2).max(50).required(),
     category: Joi.string().min(2).max(50).required(),
     numberInStock: Joi.number().min(0).required(),
+    size : Joi.array().required()
   };
 
   return Joi.validate(product, schema);

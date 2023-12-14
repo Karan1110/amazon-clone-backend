@@ -95,8 +95,7 @@ router.get("/:id", validateObjectId, async (req, res) => {
 // });
 
 router.post("/", [auth, admin, upload.array("photos", 5)], async (req, res) => {
-  console.log(req.files);
-  console.log(req.body.forms, typeof req.body.forms);
+  console.log(typeof(req.body.size));
   const { error } = validate(req.body);
   if (error) {
     console.log(error.details[0].message);
@@ -125,6 +124,7 @@ router.post("/", [auth, admin, upload.array("photos", 5)], async (req, res) => {
     brand: req.body.brand,
     category: req.body.category,
     numberInStock: req.body.numberInStock,
+    size: JSON.parse(req.body.size),
   });
 
   await product.save();

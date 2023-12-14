@@ -149,6 +149,12 @@ const userSchema = new mongoose.Schema({
       },
       selectedForm: Number,
       selectedSize: Number,
+      quantity : {
+        type : Number,
+        default: 1,
+        max : 100,
+        min : 1
+      }
     }),
   ],
   orders: [orderSchema],

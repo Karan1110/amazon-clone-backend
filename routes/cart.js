@@ -15,6 +15,7 @@ router.post("/", auth, async (req, res) => {
     ...product._doc,
     selectedForm: req.body.form,
     selectedSize: req.body.size,
+    quantity : req.body.quantity
   };
   user.cart.push(obj);
 

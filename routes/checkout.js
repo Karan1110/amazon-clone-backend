@@ -31,7 +31,7 @@ router.post("/cart", auth, async (req, res) => {
         totalAmount: cart_item.price,
         status: "pending",
         payment_method: req.body.payment_method,
-        quantity: req.body.quantity, // You may need to adjust this based on the quantity in the cart
+        quantity: cart_item.quantity, // You may need to adjust this based on the quantity in the cart
         form: cart_item.selectedForm,
         size: cart_item.selectedSize,
       };
