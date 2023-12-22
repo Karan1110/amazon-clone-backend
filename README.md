@@ -1,5 +1,5 @@
 # Frontend - https://github.com/karan1110/e-com-client
-# Ecommerce web app 
+# Amazon Clone Backend
  - Boosted sales by 55% with an ECommerce App via MongoDB,Express,React & Redux delivering top-tier UI/UX.
 
  - As an admin, efficiently managed inventory, order processing, and payments, while delivering exceptional customer service with order status changes, stock quantity updates and providing reports like best selling,rated product, total revenue etc.
