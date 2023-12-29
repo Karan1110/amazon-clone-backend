@@ -32,6 +32,7 @@ const orderSchema = new mongoose.Schema(
       enum: ["card", "cash"],
       default: "card",
     },
+    cancelled :{type :  Boolean,default : false}
   },
   {
     timestamps: true,

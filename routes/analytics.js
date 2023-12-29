@@ -9,7 +9,12 @@ router.get("/orders", [auth], async (req, res) => {
   try {
     const orders = await User.aggregate([
       { $unwind: "$orders" },
-      { $match: { "orders.status": { $ne: "delivered" } } },
+      {
+        $match: {
+          "orders.status": { $ne: "delivered" },
+          "orders.cancelled": { $ne: true },
+        },
+      },
       {
         $project: {
           "orders._id": 1,

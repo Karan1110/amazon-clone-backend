@@ -103,4 +103,19 @@ router.get("/:id", [auth], async (req, res) => {
   res.send(order);
 });
 
+router.put("/update-status/:id", auth, async (req, res) => {
+  const user = await User.findById(req.user._id);
+  const order = user.orders.id(req.params.id);
+  order.status = req.body.status;
+  await user.save();
+  res.send(order);
+});
+router.put("/cancel/:id", async (req, res) => {
+  const user = await User.findById(req.user._id);
+  const order = user.orders.id(req.params.id);
+  order.cancelled = true;
+  await user.save();
+  res.send(order);
+});
+
 module.exports = router;

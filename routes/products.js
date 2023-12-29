@@ -2,7 +2,6 @@ const { Product, validate } = require("../models/product");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 const validateObjectId = require("../middleware/validateObjectId");
-const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -23,10 +22,18 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 router.get("/", async (req, res) => {
+  const pageNumber = parseInt(req.query.page);
+
+  if (pageNumber < 0) {
+    return res.status(400).json({ error: "Page number cannot be negative." });
+  }
+
   const products = await Product.find({ numberInStock: { $gt: 0 } })
     .select("-__v")
     .sort("title")
-    .populate("ratings.user");
+    .populate("ratings.user")
+    .limit(20)
+    .skip(req.query.page * 20);
 
   res.send(products);
 });
@@ -34,7 +41,7 @@ router.get("/", async (req, res) => {
 router.get("/top-products", async (req, res) => {
   const topProducts = await Product.find()
     .sort({ "ratings.rating": -1 })
-    .limit(10) // You can adjust the limit as per your requirement to get the top N products.
+    // .limit(10) // You can adjust the limit as per your requirement to get the top N products.
     .select("-__v")
     .populate("ratings.user");
 
@@ -44,11 +51,35 @@ router.get("/top-products", async (req, res) => {
 router.get("/trending-products", async (req, res) => {
   const trendingProducts = await Product.find()
     .sort({ soldOut: -1 })
-    .limit(10) // You can adjust the limit as per your requirement to get the top N trending products.
+    // .limit(10) // You can adjust the limit as per your requirement to get the top N trending products.
     .select("-__v")
     .populate("ratings.user");
 
   res.send(trendingProducts);
+});
+
+router.get("/:category", async (req, res) => {
+  const products = await Product.find({
+    numberInStock: { $gt: 0 },
+    brand: req.params.category, // Change from req.query.brand to req.params.brand
+  })
+    .select("-__v")
+    .sort("title")
+    .populate("ratings.user");
+
+  res.send(products);
+});
+
+router.get("/:brand", async (req, res) => {
+  const products = await Product.find({
+    numberInStock: { $gt: 0 },
+    brand: req.params.brand, // Change from req.query.brand to req.params.brand
+  })
+    .select("-__v")
+    .sort("title")
+    .populate("ratings.user");
+
+  res.send(products);
 });
 
 // Route to get the calculated rating for a produc
@@ -94,43 +125,54 @@ router.get("/:id", validateObjectId, async (req, res) => {
 //   res.send(product);
 // });
 
-router.post("/", [auth, admin, upload.array("photos", 5)], async (req, res) => {
-  console.log(typeof(req.body.size));
-  const { error } = validate(req.body);
-  if (error) {
-    console.log(error.details[0].message);
-    return res.status(400).send(error.details[0].message);
-  }
+router.put(
+  "/:id",
+  [auth, admin, upload.array("photos", 5)],
+  async (req, res) => {
+    const { error } = validate(req.body);
+    if (error) {
+      console.log(error.details[0].message);
+      return res.status(400).send(error.details[0].message);
+    }
 
-  if (req.files.length != JSON.parse(req.body.forms).length) {
-    console.log("here!!!");
-    return res.status("invalid product forms request body.");
-  }
+    if (req.files.length !== JSON.parse(req.body.forms).length) {
+      console.log("Invalid product forms request body.");
+      return res.status(400).send("Invalid product forms request body.");
+    }
 
-  const forms = req.files.map((file, index) => {
-    return {
+    const forms = req.files.map((file, index) => ({
       name: JSON.parse(req.body.forms)[index].name,
       image_filename: file.filename,
-    };
-  });
+    }));
 
-  console.log(forms, req.body);
+    try {
+      const product = await Product.findByIdAndUpdate(
+        req.params.id,
+        {
+          title: req.body.title,
+          forms: forms,
+          description: req.body.description,
+          price: req.body.price,
+          brand: req.body.brand,
+          category: req.body.category,
+          numberInStock: req.body.numberInStock,
+          size: JSON.parse(req.body.size),
+        },
+        { new: true } // To return the updated product instead of the old one
+      );
 
-  const product = new Product({
-    title: req.body.title,
-    forms: forms,
-    description: req.body.description,
-    price: req.body.price,
-    brand: req.body.brand,
-    category: req.body.category,
-    numberInStock: req.body.numberInStock,
-    size: JSON.parse(req.body.size),
-  });
+      if (!product) {
+        return res.status(404).send("Product not found.");
+      }
 
-  await product.save();
-  console.log(product);
-  res.send(product);
-});
+      console.log(product);
+      res.send(product);
+    } catch (error) {
+      console.error("Error updating product:", error.message);
+      res.status(500).send("Internal Server Error");
+    }
+  }
+);
 
 router.post("/:id/rating", auth, async (req, res) => {
   const productId = req.params.id;
