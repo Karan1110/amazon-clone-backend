@@ -38,8 +38,10 @@ const productSchema = new mongoose.Schema({
   },
   forms: [productFormSchema], // Array of objects for different forms
   size: [String], // Array of objects for different forms
+  color: [String], // Array of objects for different forms
   ratings: [
     {
+      likes: { type: Number, default: 0, required: false },
       user: {
         type: mongoose.Types.ObjectId,
         ref: "User",
@@ -98,7 +100,8 @@ function validateProduct(product) {
     brand: Joi.string().min(2).max(50).required(),
     category: Joi.string().min(2).max(50).required(),
     numberInStock: Joi.number().min(0).required(),
-    size : Joi.array().required()
+    size: Joi.array().required(),
+    color: Joi.array().required(),
   };
 
   return Joi.validate(product, schema);

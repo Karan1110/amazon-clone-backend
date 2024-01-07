@@ -104,6 +104,7 @@ router.post("/:id", auth, async (req, res) => {
 
     res.json({ url: session.url });
   } catch (e) {
+    console.log(e, e.message);
     res.status(500).json({ error: e.message });
   }
 });

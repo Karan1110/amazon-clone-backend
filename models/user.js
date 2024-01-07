@@ -32,7 +32,7 @@ const orderSchema = new mongoose.Schema(
       enum: ["card", "cash"],
       default: "card",
     },
-    cancelled :{type :  Boolean,default : false}
+    cancelled: { type: Boolean, default: false },
   },
   {
     timestamps: true,
@@ -111,6 +111,10 @@ const userSchema = new mongoose.Schema({
             type: mongoose.Types.ObjectId,
             ref: "User",
           },
+          review: {
+            type: String,
+            required: false,
+          },
           rating: {
             type: Number,
             validate: {
@@ -148,14 +152,14 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
       },
-      selectedForm: Number,
-      selectedSize: Number,
-      quantity : {
-        type : Number,
+      selectedForm: { type: Number, default: 0, required: false },
+      selectedSize: { type: Number, default: 0, required: false },
+      quantity: {
+        type: Number,
         default: 1,
-        max : 100,
-        min : 1
-      }
+        max: 100,
+        min: 1,
+      },
     }),
   ],
   orders: [orderSchema],

@@ -13,8 +13,8 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     // Preserve the original extension of the file
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
+    // const ext = path.extname(file.originalname);
+    cb(null, Date.now() + ".webp");
   },
 });
 
@@ -30,7 +30,7 @@ router.get("/", async (req, res) => {
 
   const products = await Product.find({ numberInStock: { $gt: 0 } })
     .select("-__v")
-    .sort("title")
+    .sort("createdAt")
     .populate("ratings.user")
     .limit(20)
     .skip(req.query.page * 20);
@@ -40,7 +40,7 @@ router.get("/", async (req, res) => {
 
 router.get("/top-products", async (req, res) => {
   const topProducts = await Product.find()
-    .sort({ "ratings.rating": -1 })
+    .sort({ "ratings.rating": -1 }) // which has higher rating
     // .limit(10) // You can adjust the limit as per your requirement to get the top N products.
     .select("-__v")
     .populate("ratings.user");
@@ -50,7 +50,7 @@ router.get("/top-products", async (req, res) => {
 
 router.get("/trending-products", async (req, res) => {
   const trendingProducts = await Product.find()
-    .sort({ soldOut: -1 })
+    .sort({ soldOut: -1, createdAt: 1 })
     // .limit(10) // You can adjust the limit as per your requirement to get the top N trending products.
     .select("-__v")
     .populate("ratings.user");
@@ -58,7 +58,22 @@ router.get("/trending-products", async (req, res) => {
   res.send(trendingProducts);
 });
 
-router.get("/:category", async (req, res) => {
+router.get("/title", async (req, res) => {
+  if (req.query.title === "" || !req.query.title)
+    return res.status(400).send([]);
+
+  const products = await Product.find({
+    $or: [
+      { title: new RegExp(req.query.title, "i") },
+      { description: new RegExp(req.query.title, "i") },
+    ],
+  });
+
+  res.send(products);
+});
+
+router.get("/category/:category", async (req, res) => {
+  console.log("this is category");
   const products = await Product.find({
     numberInStock: { $gt: 0 },
     brand: req.params.category, // Change from req.query.brand to req.params.brand
@@ -70,7 +85,8 @@ router.get("/:category", async (req, res) => {
   res.send(products);
 });
 
-router.get("/:brand", async (req, res) => {
+router.get("/brand/:brand", async (req, res) => {
+  console.log("this is brand");
   const products = await Product.find({
     numberInStock: { $gt: 0 },
     brand: req.params.brand, // Change from req.query.brand to req.params.brand
@@ -82,12 +98,16 @@ router.get("/:brand", async (req, res) => {
   res.send(products);
 });
 
-// Route to get the calculated rating for a produc
+// Route to get the calculated rating for a product
 
 router.get("/:id", validateObjectId, async (req, res) => {
   const product = await Product.findById(req.params.id)
     .select("-__v")
-    .populate("ratings.user");
+    .populate({
+      path: "ratings.user",
+      select: "name address createdAt",
+    });
+
   if (!product)
     return res.status(404).send("The product with the given ID was not found.");
   // Calculate the weighted average rating
@@ -100,30 +120,49 @@ router.get("/:id", validateObjectId, async (req, res) => {
   });
 
   const calculatedRating = totalRating / totalWeight;
-
-  res.send(product);
+  console.log(product.ratings);
+  res.header("rating", calculatedRating).send(product);
 });
 
-// router.put("/:id", [auth], async (req, res) => {
-//   const { error } = validate(req.body);
-//   if (error) return res.status(400).send(error.details[0].message);
+router.post("/", [auth, admin, upload.array("photos", 5)], async (req, res) => {
+  const { error } = validate(req.body);
+  if (error) {
+    console.log(error.details[0].message);
+    return res.status(400).send(error.details[0].message);
+  }
 
-//   const product = await Product.findByIdAndUpdate(
-//     req.params.id,
-//     {
-//       title: req.body.title,
-//       forms: req.body.forms,
-//       numberInStock: req.body.numberInStock,
-//       dailyRentalRate: req.body.dailyRentalRate
-//     },
-//     { new: true }
-//   );
+  if (req.files.length !== JSON.parse(req.body.forms).length) {
+    console.log("Invalid product forms request body.");
+    return res.status(400).send("Invalid product forms request body.");
+  }
 
-//   if (!product)
-//     return res.status(404).send("The product with the given ID was not found.");
+  const forms = req.files.map((file, index) => ({
+    name: JSON.parse(req.body.forms)[index].name,
+    image_filename: file.filename,
+  }));
 
-//   res.send(product);
-// });
+  try {
+    const product = new Product({
+      title: req.body.title,
+      forms: forms,
+      description: req.body.description,
+      price: req.body.price,
+      brand: req.body.brand,
+      category: req.body.category,
+      numberInStock: req.body.numberInStock,
+      size: JSON.parse(req.body.size),
+      color: JSON.parse(req.body.color),
+    });
+
+    await product.save();
+
+    console.log(product);
+    res.status(201).send(product); // 201 Created status for successful creation
+  } catch (error) {
+    console.error("Error creating product:", error.message);
+    res.status(500).send("Internal Server Error");
+  }
+});
 
 router.put(
   "/:id",
@@ -178,7 +217,7 @@ router.post("/:id/rating", auth, async (req, res) => {
   const productId = req.params.id;
   const userId = req.user._id; // Assuming you have user information in req.user
 
-  const { rating } = req.body;
+  const { rating, review } = req.body;
   console.log(rating, req.body.rating, req.body);
   if (!rating || rating < 1 || rating > 5) {
     return res
@@ -194,9 +233,28 @@ router.post("/:id/rating", auth, async (req, res) => {
     }
 
     // Update the ratings array with the new rating and user ID
-    product.ratings.push({ user: userId, rating });
+    product.ratings.push({ user: userId, rating, review });
     await product.save();
 
+    res.json({ message: "Rating added successfully." });
+  } catch (error) {
+    res.status(500).send("Something went wrong.");
+  }
+});
+
+router.post("/:id/rating/like/:rating", auth, async (req, res) => {
+  const productId = req.params.id;
+  try {
+    // Find the product and update the ratings
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).send("Product not found.");
+    }
+
+    // Update the ratings array with the new rating and user ID
+    const rating = product.ratings.id(req.params.rating);
+    rating.likes++;
+    await product.save();
     res.json({ message: "Rating added successfully." });
   } catch (error) {
     res.status(500).send("Something went wrong.");
